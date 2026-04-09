@@ -3,6 +3,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+__all__ = ["Persona", "PersonaNotFoundError", "load_persona", "list_available_personas"]
+
 
 # 项目根目录（此文件位于 src/engine/，上溯两级）
 _ROOT = Path(__file__).parent.parent.parent
@@ -36,7 +38,8 @@ def _extract_name_from_frontmatter(content: str) -> str:
     for line in frontmatter.splitlines():
         line = line.strip()
         if line.startswith("name:"):
-            return line[len("name:"):].strip()
+            value = line[len("name:"):].strip()
+            return value.strip("\"'")
     return ""
 
 
@@ -78,7 +81,7 @@ def load_persona(query: str) -> Persona:
         d = _PERSONAS_DIR / subdir
         if not d.exists():
             continue
-        for md_file in d.glob("*.md"):
+        for md_file in sorted(d.glob("*.md")):
             if query_lower in md_file.stem.lower():
                 content = md_file.read_text(encoding="utf-8")
                 display_name = _extract_name_from_frontmatter(content) or md_file.stem
