@@ -144,8 +144,10 @@ Phaser 前端
 |------|------|------|
 | 讨论引擎 | 自建轻量版，不用 AutoGen | 减少依赖，完全掌控对话历史和顺序逻辑 |
 | Phase 2 桥接 | WebSocket | 复用 Star Office UI 的 Phaser 集成代码 |
-| 人格格式 | 兼容 nuwa-skill | 直接复用其高质量现代人物人格 |
-| 开发框架 | superpowers（本地）| 规划优先，代码审查，仅对本项目生效 |
+| 人格格式 | nuwa-skill 格式 + 稷下专属「争鸣坐标」| nuwa-skill 格式争鸣适配性最高；争鸣坐标解决多人格冲突设计问题 |
+| 现代人格来源 | 基于 nuwa-skill 素材提炼轻量版 | 原版 400+ 行专为单人格聊天设计，多人格圆桌需要 50-80 行轻量版 |
+| 历史/虚构人格来源 | 从一手资料直接蒸馏 | nuwa-skill 不支持，anyone-to-skill 提供方法论参考 |
+| 开发框架 | superpowers（本地，不入 git）| 规划优先，代码审查，仅对本项目生效 |
 
 ---
 
@@ -153,7 +155,8 @@ Phaser 前端
 
 | 项目 | 学什么 |
 |------|--------|
-| [nuwa-skill](https://github.com/alchaincyf/nuwa-skill) | 人格格式、蒸馏方法论 |
+| [nuwa-skill](https://github.com/alchaincyf/nuwa-skill) | 人格格式、现代人物蒸馏方法论 |
+| [anyone-to-skill](https://github.com/OpenDemon/anyone-to-skill) | 历史/虚构人物多媒体输入蒸馏方法 |
 | [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) | Phaser + WebSocket 架构 |
 | [Hermes Agent](https://github.com/NousResearch/hermes-agent) | 流式 UI、skill 生态 |
 | [edict](https://github.com/cft0808/edict) | Agent 隔离思路 |
@@ -189,6 +192,14 @@ Phaser 前端
 - **虚构人物**：用 anyone-to-skill 的思路（原著/剧本/访谈 作为输入源），输出到 nuwa-skill 格式
 
 **colleague-skill 不适用**：它解决的是"把同事克隆成 AI"的职场问题，数据源（飞书/Slack）和目标（工作协作）与稷下学宫完全不同，放弃参考。
+
+### 争鸣坐标：稷下学宫专属第五节
+
+普通人格蒸馏只解决一个问题：**"这个人怎么思考？"**
+
+圆桌争鸣额外需要知道：**"这个人会跟谁吵、为什么吵、怎么被激怒？"**
+
+争鸣坐标回答这三个问题，让引擎在排座次、决定发言顺序时有依据——"孔子和庄子必须对着坐"、"马基雅维利说完赫敏最容易接话反驳"。没有它，人格再准也可能变成各说各话。
 
 ### 稷下学宫人格模板（最终版）
 
