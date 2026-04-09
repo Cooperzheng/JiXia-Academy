@@ -50,8 +50,10 @@
 # 全局安装
 npx skills add Cooperzheng/JiXia-Academy
 
-# 触发
-稷下学宫，召唤孔子、马斯克、巴菲特、诸葛亮，议题：我应该辞职创业吗？
+# 触发示例
+稷下学宫，召唤孔子、马基雅维利、Naval，议题：我应该辞职创业吗？
+战略局开庭，议题：如何在资源不足时击败强大的对手？
+哲思局开庭，议题：人工智能有没有可能真正理解意义？
 ```
 
 **方式二：直接复制 SKILL.md**
@@ -81,20 +83,69 @@ npx skills add Cooperzheng/JiXia-Academy
 
 ---
 
+## 人格库
+
+12 个已蒸馏人格，覆盖历史、现代、虚构三类。每个人格包含：心智模型、决策启发式、表达 DNA、诚实边界，以及稷下学宫专属的**争鸣坐标**（天然对手、触发点）。
+
+### 历史人物
+
+| 人格 | 时代 | 核心框架 | 天然对手 |
+|------|------|---------|---------|
+| [孔子](personas/historical/confucius.md) | 春秋 | 仁为本，礼为形；名正言顺 | 庄子、马基雅维利 |
+| [庄子](personas/historical/zhuangzi.md) | 战国 | 道无处不在，名皆是囚笼；相对主义 | 孔子、诸葛亮、芒格 |
+| [孙子](personas/historical/sunzi.md) | 春秋 | 知己知彼；不战而屈人之兵；奇正相生 | 克劳塞维茨、孔子 |
+| [诸葛亮](personas/historical/zhuge-liang.md) | 三国 | 隆中对式全局观；法治先于人治 | 庄子、Naval、马基雅维利 |
+| [马基雅维利](personas/historical/machiavelli.md) | 文艺复兴 | 人性现实主义；爱与畏的辩证 | 孔子、赫敏、Naval |
+| [克劳塞维茨](personas/historical/clausewitz.md) | 普鲁士 | 战争是政治的延伸；摩擦无处不在 | 孙子、庄子 |
+
+### 现代人物
+
+| 人格 | 核心框架 | 天然对手 |
+|------|---------|---------|
+| [查理·芒格](personas/modern/munger.md) | 多元思维模型；逆向思考；Lollapalooza效应 | 庄子、马斯克系 |
+| [理查德·费曼](personas/modern/feynman.md) | 命名≠理解；货物崇拜检测；反自欺原则 | 庄子、诸葛亮 |
+| [Naval Ravikant](personas/modern/naval.md) | 杠杆思维；特定知识；欲望即合同 | 马基雅维利、孔子、克劳塞维茨 |
+
+> 现代人物基于 [nuwa-skill](https://github.com/alchaincyf/nuwa-skill) 素材提炼，加入稷下学宫专属争鸣坐标。
+
+### 虚构人物
+
+| 人格 | 来源 | 核心框架 | 天然对手 |
+|------|------|---------|---------|
+| [夏洛克·福尔摩斯](personas/fictional/sherlock-holmes.md) | 柯南·道尔原著 | 演绎法；排除法；情绪是数据干扰 | 庄子、孔子 |
+| [赫敏·格兰杰](personas/fictional/hermione-granger.md) | 哈利·波特系列 | 知识是最可靠的工具；规则是保护 | 马基雅维利、庄子 |
+| [甘道夫](personas/fictional/gandalf.md) | 魔戒系列 | 时机是智慧的核心；小人物承载大命运 | 马基雅维利、芒格 |
+
+---
+
+## 推荐议题 × 人物组合
+
+| 议题 | 推荐组合 | 预期冲突 |
+|------|---------|---------|
+| 如何在资源劣势下赢得竞争 | 孙子 + 克劳塞维茨 + 马基雅维利 | 东西方战略观根本对立 |
+| 规则应该被遵守还是被打破 | 孔子 + 马基雅维利 + 赫敏 + 庄子 | 四种秩序观正面碰撞 |
+| AI 会取代人类创造力吗 | 费曼 + Naval + 甘道夫 | 验证 vs 杠杆 vs 命运 |
+| 个人成功靠努力还是靠运气 | 芒格 + Naval + 孔子 + 庄子 | 激励论 vs 杠杆论 vs 修身论 vs 相对论 |
+| 目的能否正当手段 | 马基雅维利 + 诸葛亮 + 甘道夫 + 赫敏 | 现实主义 vs 道德主义 |
+
+---
+
 ## 路线图
 
 **v0.1 · 争鸣内核**（当前）
-- [x] Claude Code Skill 核心逻辑
+- [x] Claude Code Skill 核心逻辑（触发、开场、争鸣、散场）
 - [x] 流式对话引擎，人物互相回应
-- [x] 三套预设开局
-- [ ] 预制人格库（对接 [nuwa-skill](https://github.com/alchaincyf/nuwa-skill)）
+- [x] 三套预设开局（战略局 / 创新局 / 哲思局）
+- [x] 蒸馏方法调研（nuwa-skill / colleague-skill / anyone-to-skill 横向对比）
+- [x] 人格库 12 人（历史 6 + 现代 3 + 虚构 3），含争鸣坐标
 
-**v0.2 · 视觉学宫**
+**v0.2 · 视觉学宫**（计划中）
 - [ ] 像素风学宫场景（Phaser.js）
 - [ ] 角色实时动画，对话气泡渲染
+- [ ] Python 引擎（rich 流式输出，颜色 + 停顿 + 舞台提示精确控制）
 - [ ] 参考：[Star Office UI](https://github.com/ringhyacinth/Star-Office-UI)
 
-**v0.3 · 人格生态**
+**v0.3 · 人格生态**（计划中）
 - [ ] 支持导入自定义 SKILL.md 人格
 - [ ] 兼容 [Hermes Agent](https://github.com/NousResearch/hermes-agent) skill 生态
 - [ ] 炼丹炉：人格融合模块（独立项目）
@@ -105,18 +156,17 @@ npx skills add Cooperzheng/JiXia-Academy
 
 | 项目 | 用途 |
 |------|------|
-| [nuwa-skill](https://github.com/alchaincyf/nuwa-skill) | 现代人格库（心智模型 + 决策启发式）|
-| [Microsoft AutoGen](https://github.com/microsoft/autogen) | 多 Agent 讨论引擎 |
+| [nuwa-skill](https://github.com/alchaincyf/nuwa-skill) | 现代人格蒸馏方法论与素材 |
+| [anyone-to-skill](https://github.com/OpenDemon/anyone-to-skill) | 历史/虚构人物多媒体输入蒸馏方法 |
+| [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) | 像素风 Agent 可视化（Phase 2 参考）|
 | [Hermes Agent](https://github.com/NousResearch/hermes-agent) | 流式 UI、skill 生态 |
 | [edict 三省六部](https://github.com/cft0808/edict) | Agent 隔离思路 |
-| [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) | 像素风 Agent 可视化（Phase 2）|
-| [soul.md](https://github.com/aaronjmars/soul.md) | 人格格式规范 |
 
 ---
 
 ## Contributing
 
-欢迎提交新的预设人格、改进讨论引擎、或参与 v0.2 视觉学宫的开发。
+欢迎提交新人格、改进讨论引擎、或参与 v0.2 视觉学宫的开发。
 
 详见 [CONTRIBUTING.md](CONTRIBUTING.md)
 
