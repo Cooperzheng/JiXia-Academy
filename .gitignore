@@ -25,5 +25,8 @@ Thumbs.db
 .idea/
 *.swp
 
+# Local Claude Code config (skills, settings)
+.claude/
+
 # Logs
 *.log
