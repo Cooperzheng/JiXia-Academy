@@ -87,7 +87,7 @@ npx skills add Cooperzheng/JiXia-Academy
 - [x] Claude Code Skill 核心逻辑
 - [x] 流式对话引擎，人物互相回应
 - [x] 三套预设开局
-- [ ] 预制人格库（对接 [anyone-to-skill](https://github.com/OpenDemon/anyone-to-skill)）
+- [ ] 预制人格库（对接 [nuwa-skill](https://github.com/alchaincyf/nuwa-skill)）
 
 **v0.2 · 视觉学宫**
 - [ ] 像素风学宫场景（Phaser.js）
@@ -118,7 +118,7 @@ npx skills add Cooperzheng/JiXia-Academy
 
 欢迎提交新的预设人格、改进讨论引擎、或参与 v0.2 视觉学宫的开发。
 
-详见 [CONTRIBUTING.md](CONTRIBUTING.md)（即将添加）
+详见 [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
