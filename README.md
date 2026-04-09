@@ -105,11 +105,11 @@ npx skills add Cooperzheng/JiXia-Academy
 
 | 项目 | 用途 |
 |------|------|
-| [anyone-to-skill](https://github.com/OpenDemon/anyone-to-skill) | 预制人格库 |
+| [nuwa-skill](https://github.com/alchaincyf/nuwa-skill) | 现代人格库（心智模型 + 决策启发式）|
 | [Microsoft AutoGen](https://github.com/microsoft/autogen) | 多 Agent 讨论引擎 |
 | [Hermes Agent](https://github.com/NousResearch/hermes-agent) | 流式 UI、skill 生态 |
 | [edict 三省六部](https://github.com/cft0808/edict) | Agent 隔离思路 |
-| [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) | 像素风 Agent 可视化 |
+| [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) | 像素风 Agent 可视化（Phase 2）|
 | [soul.md](https://github.com/aaronjmars/soul.md) | 人格格式规范 |
 
 ---
