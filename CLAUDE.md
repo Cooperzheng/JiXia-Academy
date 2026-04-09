@@ -1,5 +1,23 @@
 # 稷下学宫 · 开发规范
 
+## 强制工作流（写任何代码前必须执行）
+
+> 本项目使用 superpowers 开发框架（`.claude/skills/superpowers/`）。
+> 以下检查点是硬性要求，不是建议。
+
+**写代码前（每次）：**
+1. 调用 `superpowers:brainstorming` — 先头脑风暴设计方案
+2. 调用 `superpowers:writing-plans` — 写完整 Plan 文档到 `docs/superpowers/plans/YYYY-MM-DD-<name>.md`
+3. 执行方式二选一：`superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`
+
+**写代码后（每次）：**
+4. 调用 `superpowers:requesting-code-review` — 请求 code review
+5. 调用 `superpowers:verification-before-completion` — 验收后再 push
+
+**文档/人格文件（非代码）：** 上述流程可跳过，但重大格式变更前仍需 brainstorm。
+
+---
+
 ## 项目定位
 
 召唤任意人物组成圆桌，抛出议题，看他们因你而争鸣。
