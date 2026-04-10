@@ -34,13 +34,14 @@
 - ✅ `main.py`：示例入口
 
 ### 争鸣质量优化
-- 🚧 **Moderator 动态发言顺序**：被反驳者优先接话，告别固定轮转
-  - Spec: `docs/superpowers/specs/2026-04-10-moderator-design.md`
-  - Plan: `docs/superpowers/plans/2026-04-10-moderator.md`
+- ✅ **Prompt 强化**：上一条发言单独摘出，强制先回应再立场
 - ⬜ **角色内化咒语**：system prompt 强化，防止多轮后人格漂移
 - ⬜ **议题关联记忆注入**：每次争鸣开始前动态生成"该人格对本议题的预设立场"注入 prompt，让孔子不只是孔子，而是"对这个问题有过具体思考的孔子"（借鉴 MiroFish persona 记忆字段）
 - ⬜ **激怒触发点激活**：读取争鸣坐标字段，注入情绪状态（Antagonist Injection）
 - ⬜ **三步发言结构**：回应对方论点 → 亮立场 → 抛问题给下一个人
+- 💡 **Moderator 动态发言顺序**：后置——用户入局后用户本身承担调度角色，届时再评估是否需要
+  - Spec: `docs/superpowers/specs/2026-04-10-moderator-design.md`
+  - Plan: `docs/superpowers/plans/2026-04-10-moderator.md`
 
 ### 收尾
 - ⬜ 端到端跑通验收
