@@ -81,12 +81,30 @@ def _build_system_prompt(
         f"2. 有分歧就直说，不必找共同点，不必给对方台阶下\n"
         f"3. 用你自己的思维框架说话，不要变成通用的说教"
     )
+
+    # 角色内化咒语（参考 CAMEL role inception prompt）
+    base += (
+        f"\n\n【身份锚定】\n"
+        f"你是且只是{persona.name}。绝不漂移成通用 AI 的语气。\n"
+        f"你的思维框架、你的偏见、你的盲点，都是你独有的——不要试图「平衡」或「客观」。"
+    )
+
+    # 激怒触发点（参考 generative_agents 记忆注入）
+    if persona.trigger_points:
+        triggers = "\n".join(f"- {t}" for t in persona.trigger_points)
+        base += (
+            f"\n\n【你的雷区——被触犯时反驳力度自然加大】\n"
+            f"{triggers}"
+        )
+
+    # 主持人开场（始终在最末尾）
     if opening_statement:
         base += (
             f"\n\n【主持人开场】\n"
             f"{opening_statement}\n"
             f"请在整场争鸣中，始终围绕主持人提出的这个切入点展开。"
         )
+
     return base
 
 

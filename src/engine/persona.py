@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 __all__ = ["Persona", "PersonaNotFoundError", "load_persona", "list_available_personas"]
@@ -19,8 +19,9 @@ class PersonaNotFoundError(Exception):
 
 @dataclass
 class Persona:
-    name: str      # 从 frontmatter name: 字段读取的显示名，如"孔子"
-    content: str   # .md 文件全文，直接塑入 system prompt
+    name: str                                      # 从 frontmatter name: 字段读取的显示名
+    content: str                                   # .md 文件全文，直接塑入 system prompt
+    trigger_points: list[str] = field(default_factory=list)  # 被激怒的触发点列表
 
 
 def _extract_name_from_frontmatter(content: str) -> str:
@@ -41,6 +42,45 @@ def _extract_name_from_frontmatter(content: str) -> str:
             value = line[len("name:"):].strip()
             return value.strip("\"'")
     return ""
+
+
+def _parse_trigger_points(content: str) -> list[str]:
+    """
+    从人格文件 markdown 中解析「被激怒的触发点」列表。
+
+    解析规则：
+    - 找到 '**被激怒的触发点**：' 所在行后开始收集
+    - 收集 '- ' 开头的行，strip 掉前缀
+    - 遇到空行后，若紧接的非空行以 '**' 开头则停止
+    - 到文件结尾时停止
+    - 找不到该字段返回 []
+    """
+    lines = content.splitlines()
+    collecting = False
+    result = []
+    last_blank = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        if not collecting:
+            if "**被激怒的触发点**" in stripped:
+                collecting = True
+            continue
+
+        if stripped == "":
+            last_blank = True
+            continue
+
+        if last_blank and stripped.startswith("**"):
+            break  # 新的 ** 标题，停止收集
+
+        last_blank = False
+
+        if stripped.startswith("- "):
+            result.append(stripped[2:].strip())
+
+    return result
 
 
 def list_available_personas() -> list[str]:
@@ -85,7 +125,8 @@ def load_persona(query: str) -> Persona:
             if query_lower in md_file.stem.lower():
                 content = md_file.read_text(encoding="utf-8")
                 display_name = _extract_name_from_frontmatter(content) or md_file.stem
-                return Persona(name=display_name, content=content)
+                trigger_points = _parse_trigger_points(content)
+                return Persona(name=display_name, content=content, trigger_points=trigger_points)
 
     available = list_available_personas()
     raise PersonaNotFoundError(
