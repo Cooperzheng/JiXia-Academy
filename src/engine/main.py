@@ -6,10 +6,11 @@
     python -m src.engine.main
 
 前置条件：
-    export ANTHROPIC_API_KEY=your_key_here
+    export GEMINI_API_KEY=your_key_here
 """
 from .persona import load_persona
 from .discussion import Discussion
+from .renderer import render, make_color_map
 
 
 def main() -> None:
@@ -25,8 +26,8 @@ def main() -> None:
         rounds=6,
     )
 
-    for line in discussion.run():
-        print(line)
+    color_map = make_color_map(personas)
+    render(discussion.run(), color_map)
 
 
 if __name__ == "__main__":

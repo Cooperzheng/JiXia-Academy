@@ -16,6 +16,8 @@
 
 **文档/人格文件（非代码）：** 上述流程可跳过，但重大格式变更前仍需 brainstorm。
 
+**Auto mode 下的优先级：** Auto mode 的"减少打扰"不覆盖本工作流。brainstorm 和 plan 仍须执行，设计确认节点不跳过——可以把确认合并成一条消息，但必须等用户点头再动手。
+
 ---
 
 ## 项目定位
@@ -70,31 +72,28 @@ JiXia-Academy/
 
 每个人格包含：心智模型、决策启发式、表达DNA、诚实边界、争鸣坐标（稷下学宫专属）。
 
-#### 待完成：Python 引擎（`src/engine/`）
-比纯 SKILL.md 多了颜色、停顿、舞台提示的精确控制。
+#### 已完成：Python 引擎（`src/engine/`）
 
 | 文件 | 职责 |
 |------|------|
-| `persona.py` | 加载 `personas/` 下的 `.md` 文件，解析人物信息 |
-| `discussion.py` | 维护对话历史，决定发言顺序，调用 Claude API 生成回应 |
-| `renderer.py` | `rich` 库流式输出，每人物一色，停顿，舞台提示 |
-| `main.py` | CLI 入口，接收人物 + 议题参数 |
+| `persona.py` | 加载 `personas/` 下的 `.md` 文件，模糊匹配，全文注入 |
+| `discussion.py` | 维护对话历史，固定轮转，调用 Gemini API（OpenAI 兼容接口）|
+| `renderer.py` | `rich` 库彩色输出，每人物一色，舞台提示斜体灰 |
+| `main.py` | 示例入口（非 CLI），孔子×马基雅维利×孙子 6 轮 |
 
-**讨论引擎核心逻辑：**
-```
-1. 加载选定人格（读取 .md 文件）
-2. 输出开场框
-3. 循环（4-6轮）：
-   a. 决定下一个发言者（首轮按戏剧张力，后续按被点名/被反驳）
-   b. 构造 prompt：系统 prompt（人格描述）+ 对话历史 + "现在轮到你回应"
-   c. 流式调用 Claude API，实时输出
-   d. 追加到对话历史
-4. 输出散场框
+**运行方式：**
+```bash
+export GEMINI_API_KEY=your_key_here
+python -m src.engine.main
 ```
 
-#### 待完成：安装与测试
-- [ ] 验证 `SKILL.md` 手动复制安装流程
-- [ ] 补充 `requirements.txt`（`anthropic`、`rich`）
+**技术决策：**
+- API：从 Anthropic SDK 切换为 Gemini（通过 OpenAI 兼容接口），model: `gemini-2.0-flash`
+- 人格注入：全文塑入（后续可优化为选择性注入，触发条件：成本 > $0.05/次）
+- 发言顺序：固定轮转（后续可升级为"被反驳者优先"）
+
+#### 待完成：验收与收尾
+- [ ] 端到端跑通 `python -m src.engine.main`（需 GEMINI_API_KEY）
 - [ ] 录制 demo GIF（跑一次真实争鸣，截图/录屏）
 - [ ] 更新 README 中的 demo 为真实输出
 
@@ -166,6 +165,8 @@ Phaser 前端
 | 现代人格来源 | 基于 nuwa-skill 素材提炼轻量版 | 原版 400+ 行专为单人格聊天设计，多人格圆桌需要 50-80 行轻量版 |
 | 历史/虚构人格来源 | 从一手资料直接蒸馏 | nuwa-skill 不支持，anyone-to-skill 提供方法论参考 |
 | 开发框架 | superpowers（本地，不入 git）| 规划优先，代码审查，仅对本项目生效 |
+| Python 引擎 API | Gemini（OpenAI 兼容接口） | 用户无 Anthropic API key，Gemini 免费额度可用 |
+| 人格注入策略 | 全文塑入（MVP） | 实现简单；后续成本超阈值时升级为选择性注入 |
 
 ---
 

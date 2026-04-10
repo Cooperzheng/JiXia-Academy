@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Generator, TypedDict
 
-import anthropic
+from openai import OpenAI
 
 from .persona import Persona
 
@@ -73,37 +73,42 @@ class Discussion:
     personas: list[Persona]
     topic: str
     rounds: int = 5
-    model: str = "claude-opus-4-5"
+    model: str = "gemini-2.0-flash"
     history: list[SpeechEntry] = field(default_factory=list, init=False)
-    _client: anthropic.Anthropic = field(init=False, repr=False)
+    _client: OpenAI = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise EnvironmentError(
-                "环境变量 ANTHROPIC_API_KEY 未设置。\n"
-                "请执行：export ANTHROPIC_API_KEY=your_key_here"
+                "环境变量 GEMINI_API_KEY 未设置。\n"
+                "请执行：export GEMINI_API_KEY=your_key_here"
             )
-        self._client = anthropic.Anthropic(api_key=api_key)
+        self._client = OpenAI(
+            api_key=api_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        )
 
     def _speak(self, persona: Persona) -> str:
-        """调用 Claude API，返回该人格本轮发言文本。失败时重试一次。"""
+        """调用 API，返回该人格本轮发言文本。失败时重试一次。"""
         all_names = [p.name for p in self.personas]
         system = _build_system_prompt(persona, self.topic, all_names)
         user = _build_user_prompt(persona, self.history)
 
         for attempt in range(2):
             try:
-                message = self._client.messages.create(
+                response = self._client.chat.completions.create(
                     model=self.model,
                     max_tokens=300,
-                    system=system,
-                    messages=[{"role": "user", "content": user}],
+                    messages=[
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
                 )
-                return message.content[0].text.strip()
+                return response.choices[0].message.content.strip()
             except Exception as e:
                 if attempt == 0:
-                    continue  # 静默重试一次
+                    continue
                 return f"（{persona.name} 此刻无言——{e}）"
         # unreachable, satisfies type checker
         return f"（{persona.name} 此刻无言）"
