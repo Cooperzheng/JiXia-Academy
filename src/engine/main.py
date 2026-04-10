@@ -10,11 +10,14 @@
     GEMINI_API_KEY=your_key_here
 """
 from dotenv import load_dotenv
-load_dotenv()  # 加载项目根目录的 .env
+load_dotenv()
 
+import sys
 from .persona import load_persona
 from .discussion import Discussion
-from .renderer import render, make_color_map
+from .moderator import Moderator
+from .interruptor import Interruptor
+from .renderer import render, make_color_map, render_speech_stream, render_user_speech
 
 
 def main() -> None:
@@ -31,7 +34,63 @@ def main() -> None:
     )
 
     color_map = make_color_map(personas)
-    render(discussion.run(), color_map)
+
+    # ── 开场提问 ──────────────────────────────────────────
+    sep = "━" * 39
+    print(f"\n{sep}")
+    print("  你有什么想法想带入今天的争鸣？（直接回车跳过）")
+    sys.stdout.write("  你  │  ")
+    sys.stdout.flush()
+    opening = input().strip()
+    if opening:
+        discussion.opening_statement = opening
+
+    print(f"\n  [提示] 争鸣进行中，按 Tab 键可随时插话")
+    print(f"{sep}\n")
+
+    # ── 初始化 Moderator 和 Interruptor ──────────────────
+    moderator = Moderator(
+        personas=personas,
+        model=discussion.model,
+        _client=discussion._client,
+    )
+    interruptor = Interruptor()
+    interruptor.start()
+
+    # ── 插话回调 ──────────────────────────────────────────
+    def on_interrupt() -> None:
+        sys.stdout.write("\n  你  │  ")
+        sys.stdout.flush()
+        try:
+            user_text = input().strip()
+        except EOFError:
+            return
+
+        if not user_text:
+            return
+
+        # 渲染用户发言
+        render_user_speech(user_text)
+
+        # 注入 history
+        discussion.inject_user_speech(user_text)
+
+        # 人格回应
+        for speech in discussion.respond_to_user(user_text, moderator):
+            render_speech_stream(speech, color_map)
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+
+    # ── 主争鸣循环 ────────────────────────────────────────
+    try:
+        render(
+            discussion.run(),
+            color_map,
+            interruptor=interruptor,
+            on_interrupt=on_interrupt,
+        )
+    finally:
+        interruptor.stop()
 
 
 if __name__ == "__main__":

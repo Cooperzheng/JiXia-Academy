@@ -2,15 +2,16 @@
 from __future__ import annotations
 
 import sys
-from typing import Generator, Union
+from typing import Callable, Generator, Union
 
 from rich.console import Console
 from rich.text import Text
 
 from .persona import Persona
 from .discussion import SpeechStream
+from .interruptor import Interruptor
 
-__all__ = ["make_color_map", "render"]
+__all__ = ["make_color_map", "render", "render_speech_stream", "render_user_speech"]
 
 _PALETTE = ["cyan", "yellow", "magenta", "green", "red"]
 _SEPARATOR_CHAR = "━"
@@ -48,46 +49,65 @@ def _render_stage(line: str) -> None:
     _console.print(f"[dim italic]{line}[/dim italic]")
 
 
-def _render_speech_stream(speech: SpeechStream, color_map: dict[str, str]) -> None:
+def render_user_speech(text: str) -> None:
+    """渲染用户发言：白色加粗姓名，白色正文。"""
+    t = Text()
+    t.append("你", style="bold white")
+    t.append("  │  ", style="white dim")
+    t.append(text, style="white")
+    _console.print(t)
+
+
+def render_speech_stream(
+    speech: SpeechStream,
+    color_map: dict[str, str],
+    interruptor: Interruptor | None = None,
+) -> bool:
     """
-    流式渲染一次发言：rich 渲染「姓名 │ 」前缀，
-    chunk 正文直接写 stdout（绕过 rich markup 解析，零延迟）。
+    流式渲染一次发言。
+    返回 True 表示正常结束，False 表示被 Tab 中断。
     """
     name = speech.name
     color = color_map.get(name, "white")
 
-    # 前缀用 rich 渲染（只调用一次，没有性能问题）
     prefix = Text()
     prefix.append(f"{name}", style=f"bold {color}")
     prefix.append("  │  ", style="white dim")
     _console.print(prefix, end="")
 
-    # chunk 直接写 stdout：无 markup 解析、无 flush 开销，真正实时
     ansi = _ANSI_COLOR.get(color, "")
     out = sys.stdout
+    interrupted = False
+
     for chunk in speech:
         out.write(f"{ansi}{chunk}{_ANSI_RESET}")
         out.flush()
+        if interruptor and interruptor.interrupt_flag.is_set():
+            interrupted = True
+            break
 
-    # 发言结束换行
     out.write("\n")
     out.flush()
+    return not interrupted
 
 
 def render(
     lines: Generator[Union[str, SpeechStream], None, None],
     color_map: dict[str, str],
+    interruptor: Interruptor | None = None,
+    on_interrupt: Callable[[], None] | None = None,
 ) -> None:
     """
     消费 discussion.run() 的输出，用 rich 渲染每一项。
-
-    Args:
-        lines:     discussion.run() 返回的 Generator（str 或 SpeechStream）
-        color_map: make_color_map() 返回的 {name: color} 映射
+    检测到 Tab 中断时调用 on_interrupt 回调，处理完后继续。
     """
     for item in lines:
         if isinstance(item, SpeechStream):
-            _render_speech_stream(item, color_map)
+            completed = render_speech_stream(item, color_map, interruptor)
+            if not completed and on_interrupt:
+                on_interrupt()
+                if interruptor:
+                    interruptor.clear()
         elif not item:
             _console.print()
         elif _SEPARATOR_CHAR in item:
