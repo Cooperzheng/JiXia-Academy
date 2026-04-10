@@ -120,6 +120,8 @@ npx skills add Cooperzheng/JiXia-Academy
 | [理查德·费曼](personas/modern/feynman.md) | 命名≠理解；反自欺原则 | 庄子、诸葛亮 |
 | [Naval Ravikant](personas/modern/naval.md) | 杠杆思维；特定知识 | 马基雅维利、孔子 |
 
+> 现代人物参考 [nuwa-skill](https://github.com/alchaincyf/nuwa-skill) 的蒸馏方法论，基于一手资料独立创作。
+
 ### 虚构人物
 | 人格 | 来源 | 核心框架 |
 |------|------|---------|
