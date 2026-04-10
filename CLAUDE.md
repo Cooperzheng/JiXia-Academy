@@ -46,102 +46,9 @@ JiXia-Academy/
 
 ---
 
-## Phase 1 · 争鸣内核
+## 进度与规划
 
-### 目标
-
-用户在 Claude Code 里一句话触发，看到流式输出的多人格争鸣过程。
-
-### 任务清单
-
-#### 已完成
-- [x] `SKILL.md` 核心逻辑（触发、开场、争鸣、散场）
-- [x] 三套预设开局（战略局 / 创新局 / 哲思局）
-- [x] 人格格式规范（见下方「人格格式规范」章节，调研后已更新）
-- [x] Step 0：蒸馏方法调研（nuwa-skill / colleague-skill / anyone-to-skill 横向对比）
-
-#### 已完成 Step 1：人格库扩充
-
-目标 **12 个人格**，全部完成：
-
-| 类别 | 人格 |
-|------|------|
-| 历史人物（6） | 孔子、孙子、诸葛亮、庄子、马基雅维利、克劳塞维茨 |
-| 虚构人物（3） | 福尔摩斯、赫敏·格兰杰、甘道夫 |
-| 现代人物（3） | 芒格、费曼、Naval（基于 nuwa-skill 素材提炼） |
-
-每个人格包含：心智模型、决策启发式、表达DNA、诚实边界、争鸣坐标（稷下学宫专属）。
-
-#### 已完成：Python 引擎（`src/engine/`）
-
-| 文件 | 职责 |
-|------|------|
-| `persona.py` | 加载 `personas/` 下的 `.md` 文件，模糊匹配，全文注入 |
-| `discussion.py` | 维护对话历史，固定轮转，调用 Gemini API（OpenAI 兼容接口）|
-| `renderer.py` | `rich` 库彩色输出，每人物一色，舞台提示斜体灰 |
-| `main.py` | 示例入口（非 CLI），孔子×马基雅维利×孙子 6 轮 |
-
-**运行方式：**
-```bash
-export GEMINI_API_KEY=your_key_here
-python -m src.engine.main
-```
-
-**技术决策：**
-- API：从 Anthropic SDK 切换为 Gemini（通过 OpenAI 兼容接口），model: `gemini-2.0-flash`
-- 人格注入：全文塑入（后续可优化为选择性注入，触发条件：成本 > $0.05/次）
-- 发言顺序：固定轮转（后续可升级为"被反驳者优先"）
-
-#### 待完成：验收与收尾
-- [ ] 端到端跑通 `python -m src.engine.main`（需 GEMINI_API_KEY）
-- [ ] 录制 demo GIF（跑一次真实争鸣，截图/录屏）
-- [ ] 更新 README 中的 demo 为真实输出
-
----
-
-## Phase 2 · 视觉学宫（计划中）
-
-### 目标
-
-本地启动一个像素风学宫界面，人物在场景中实时发言动画。
-
-### 技术栈
-
-| 组件 | 技术 | 参考 |
-|------|------|------|
-| 场景渲染 | Phaser.js | Star Office UI |
-| 后端服务 | Flask + flask-socketio | Star Office UI |
-| 实时推送 | WebSocket | Star Office UI |
-| 桌面打包 | Electron（可选）| — |
-
-### 数据流
-
-```
-src/engine/（Python）
-    ↓ 每生成一句发言，推送结构化事件
-Flask 服务器
-    ↓ WebSocket
-Phaser 前端
-    ↓ 触发对应角色动画 + 对话气泡
-```
-
-### WebSocket 事件格式
-
-```json
-{ "type": "persona_speaking", "name": "孔子", "text": "名不正则言不顺..." }
-{ "type": "persona_done",     "name": "孔子" }
-{ "type": "stage_direction",  "text": "*孔子沉默片刻*" }
-{ "type": "session_end" }
-```
-
----
-
-## Phase 3 · 人格生态（计划中）
-
-- nuwa-skill 人格库直接导入
-- 支持用户带入自定义 SKILL.md 人格
-- Hermes Agent skill 生态兼容
-- 炼丹炉：人格融合（独立项目，互相引用）
+**→ 见 [`ROADMAP.md`](./ROADMAP.md)**
 
 ---
 
@@ -167,6 +74,7 @@ Phaser 前端
 | 开发框架 | superpowers（本地，不入 git）| 规划优先，代码审查，仅对本项目生效 |
 | Python 引擎 API | Gemini（OpenAI 兼容接口） | 用户无 Anthropic API key，Gemini 免费额度可用 |
 | 人格注入策略 | 全文塑入（MVP） | 实现简单；后续成本超阈值时升级为选择性注入 |
+| 发言顺序 | Moderator 动态决定（被反驳者优先） | 固定轮转对话感弱，Moderator 架构扩展性好 |
 
 ---
 
