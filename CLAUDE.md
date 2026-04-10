@@ -6,9 +6,10 @@
 > 以下检查点是硬性要求，不是建议。
 
 **写代码前（每次）：**
-1. 调用 `superpowers:brainstorming` — 先头脑风暴设计方案
-2. 调用 `superpowers:writing-plans` — 写完整 Plan 文档到 `docs/superpowers/plans/YYYY-MM-DD-<name>.md`
-3. 执行方式二选一：`superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`
+1. 查「参考项目库」——有没有现成实现可以借鉴，有则先读代码再动手
+2. 调用 `superpowers:brainstorming` — 先头脑风暴设计方案
+3. 调用 `superpowers:writing-plans` — 写完整 Plan 文档到 `docs/superpowers/plans/YYYY-MM-DD-<name>.md`
+4. 执行方式二选一：`superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`
 
 **写代码后（每次）：**
 4. 调用 `superpowers:requesting-code-review` — 请求 code review
@@ -94,16 +95,41 @@ JiXia-Academy/
 
 ---
 
-## 参考项目
+## 参考项目库
 
-| 项目 | 学什么 |
-|------|--------|
-| [nuwa-skill](https://github.com/alchaincyf/nuwa-skill) | 人格格式、现代人物蒸馏方法论 |
-| [anyone-to-skill](https://github.com/OpenDemon/anyone-to-skill) | 历史/虚构人物多媒体输入蒸馏方法 |
-| [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) | Phaser + WebSocket 架构 |
-| [Hermes Agent](https://github.com/NousResearch/hermes-agent) | 流式 UI、skill 生态 |
-| [edict](https://github.com/cft0808/edict) | Agent 隔离思路 |
-| [superpowers](https://github.com/obra/superpowers) | 开发规范（规划→实现→审查）|
+> **开发原则：写代码前先查这里，看有没有现成的实现可以借鉴。**
+> 遇到新问题时，先搜 GitHub，找到有价值的项目就补充进来。
+
+### 争鸣引擎 & 多 Agent 对话
+
+| 项目 | 链接 | 借鉴什么 |
+|------|------|---------|
+| MiroFish | [666ghj/MiroFish](https://github.com/666ghj/MiroFish) | Interview IPC 机制（用户插话原型）、上帝视角报告 prompt、persona 记忆字段设计 |
+| llm_multiagent_debate | [composable-models/llm_multiagent_debate](https://github.com/composable-models/llm_multiagent_debate) | 强制回应注入 prompt pattern："Using their reasoning as advice, give your updated answer" |
+| CAMEL | [camel-ai/camel](https://github.com/camel-ai/camel) | Role inception prompt：防止人格漂移的"Never forget you are X"咒语 |
+| generative_agents | [joonspk-research/generative_agents](https://github.com/joonspk-research/generative_agents) | 记忆-议题对齐：发言前检索"我对此议题的核心观点"，议题关联记忆注入 |
+| ChatEval | [chanchimin/ChatEval](https://github.com/chanchimin/ChatEval) | 发言顺序研究：异步轮流+全历史注入质量最高；角色分工提升讨论深度 |
+
+### 人格蒸馏
+
+| 项目 | 链接 | 借鉴什么 |
+|------|------|---------|
+| nuwa-skill | [alchaincyf/nuwa-skill](https://github.com/alchaincyf/nuwa-skill) | 人格格式（心智模型+决策启发式+表达DNA+诚实边界）、现代人物蒸馏方法论 |
+| anyone-to-skill | [OpenDemon/anyone-to-skill](https://github.com/OpenDemon/anyone-to-skill) | 历史/虚构人物多媒体输入蒸馏方法 |
+
+### 视觉界面（Phase 3 参考）
+
+| 项目 | 链接 | 借鉴什么 |
+|------|------|---------|
+| Star Office UI | [ringhyacinth/Star-Office-UI](https://github.com/ringhyacinth/Star-Office-UI) | Phaser + Flask + WebSocket 完整架构，像素风 Agent 可视化 |
+| Hermes Agent | [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) | 流式 UI、skill 生态设计 |
+
+### 开发工具
+
+| 项目 | 链接 | 借鉴什么 |
+|------|------|---------|
+| superpowers | [obra/superpowers](https://github.com/obra/superpowers) | 开发规范（brainstorm→plan→实现→review） |
+| edict | [cft0808/edict](https://github.com/cft0808/edict) | Agent 隔离思路 |
 
 ---
 
