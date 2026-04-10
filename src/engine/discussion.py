@@ -2,7 +2,7 @@
 from __future__ import annotations
 import os
 from dataclasses import dataclass, field
-from typing import Generator, Iterator, TypedDict
+from typing import Generator, Iterator, Literal, TypedDict
 
 from openai import OpenAI
 
@@ -12,6 +12,7 @@ from .persona import Persona
 class SpeechEntry(TypedDict):
     name: str
     text: str
+    role: Literal["persona", "user"]
 
 
 @dataclass
@@ -63,9 +64,14 @@ def _format_history(history: list[SpeechEntry]) -> str:
     return "\n".join(lines)
 
 
-def _build_system_prompt(persona: Persona, topic: str, all_names: list[str]) -> str:
+def _build_system_prompt(
+    persona: Persona,
+    topic: str,
+    all_names: list[str],
+    opening_statement: str | None = None,
+) -> str:
     members = " · ".join(all_names)
-    return (
+    base = (
         f"{persona.content}\n\n"
         f"---\n\n"
         f"你正在参与稷下学宫的圆桌争鸣。今日议题：「{topic}」\n"
@@ -75,6 +81,13 @@ def _build_system_prompt(persona: Persona, topic: str, all_names: list[str]) -> 
         f"2. 有分歧就直说，不必找共同点，不必给对方台阶下\n"
         f"3. 用你自己的思维框架说话，不要变成通用的说教"
     )
+    if opening_statement:
+        base += (
+            f"\n\n【主持人开场】\n"
+            f"{opening_statement}\n"
+            f"请在整场争鸣中，始终围绕主持人提出的这个切入点展开。"
+        )
+    return base
 
 
 def _build_user_prompt(current_persona: Persona, history: list[SpeechEntry]) -> str:
@@ -82,12 +95,19 @@ def _build_user_prompt(current_persona: Persona, history: list[SpeechEntry]) -> 
 
     if history:
         last = history[-1]
-        last_speaker_instruction = (
-            f"\n\n【刚才发言的是：{last['name']}】\n"
-            f"他/她说：「{last['text']}」\n\n"
-            f"你必须先用一句话直接回应他/她的具体观点（可以反驳、质疑、或追问），"
-            f"再阐述你自己的立场。不许跳过这步。"
-        )
+        if last.get("role") == "user":
+            last_speaker_instruction = (
+                f"\n\n【主持人刚才发言】\n"
+                f"「{last['text']}」\n\n"
+                f"你必须先直接回应主持人的话，再阐述你的立场。"
+            )
+        else:
+            last_speaker_instruction = (
+                f"\n\n【刚才发言的是：{last['name']}】\n"
+                f"他/她说：「{last['text']}」\n\n"
+                f"你必须先用一句话直接回应他/她的具体观点（可以反驳、质疑、或追问），"
+                f"再阐述你自己的立场。不许跳过这步。"
+            )
     else:
         last_speaker_instruction = "\n\n你是第一位开口的，直接亮出你的核心立场。"
 
@@ -99,12 +119,29 @@ def _build_user_prompt(current_persona: Persona, history: list[SpeechEntry]) -> 
     )
 
 
+def _build_user_response_prompt(
+    persona: Persona,
+    user_text: str,
+    history: list[SpeechEntry],
+) -> str:
+    """用户插话后，被点名/选中人格的专属 prompt。"""
+    history_text = _format_history(history)
+    return (
+        f"【对话记录】\n{history_text}\n\n"
+        f"【主持人直接向你发言】\n"
+        f"「{user_text}」\n\n"
+        f"必须先直接回应主持人这句话，100字以内，再继续你的论点。\n"
+        f"语气可以强硬，禁止客套。请务必使用简体中文回答。"
+    )
+
+
 @dataclass
 class Discussion:
     personas: list[Persona]
     topic: str
     rounds: int = 5
     model: str = "gemini-2.0-flash"
+    opening_statement: str | None = None
     history: list[SpeechEntry] = field(default_factory=list, init=False)
     _client: OpenAI = field(init=False, repr=False)
 
@@ -120,11 +157,24 @@ class Discussion:
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         )
 
-    def _speak_stream(self, persona: Persona) -> SpeechStream:
-        """调用流式 API，返回 SpeechStream（可实时迭代 chunk）。"""
+    def inject_user_speech(self, text: str) -> None:
+        """将用户发言追加进 history。"""
+        self.history.append({"name": "你", "text": text, "role": "user"})
+
+    def _speak_stream(
+        self,
+        persona: Persona,
+        user_text: str | None = None,
+    ) -> SpeechStream:
+        """调用流式 API，返回 SpeechStream。user_text 非空时使用用户回应 prompt。"""
         all_names = [p.name for p in self.personas]
-        system = _build_system_prompt(persona, self.topic, all_names)
-        user = _build_user_prompt(persona, self.history)
+        system = _build_system_prompt(
+            persona, self.topic, all_names, self.opening_statement
+        )
+        if user_text is not None:
+            user = _build_user_response_prompt(persona, user_text, self.history)
+        else:
+            user = _build_user_prompt(persona, self.history)
 
         def _chunks() -> Iterator[str]:
             try:
@@ -146,9 +196,31 @@ class Discussion:
 
         return SpeechStream(name=persona.name, _iter=_chunks())
 
+    def respond_to_user(
+        self,
+        user_text: str,
+        moderator: "Moderator",  # type: ignore[name-defined]  # noqa: F821
+    ) -> Generator[SpeechStream, None, None]:
+        """
+        决定回应人选，逐个 yield SpeechStream。
+        解析 user_text 中的点名，传给 moderator。
+        """
+        named = [p.name for p in self.personas if p.name in user_text]
+
+        speakers = moderator.next_speakers_for_user(
+            self.history, user_text, named
+        )
+
+        for persona in speakers:
+            speech = self._speak_stream(persona, user_text=user_text)
+            yield speech
+            self.history.append(
+                {"name": persona.name, "text": speech.full_text(), "role": "persona"}
+            )
+
     def run(self) -> Generator[str | SpeechStream, None, None]:
         """
-        主争鸣循环。固定轮转（personas[0]→[1]→...→[n-1]→[0]→...）。
+        主争鸣循环。固定轮转。
 
         yield 类型：
           - str          → 开场框/散场框/空行，直接打印
@@ -160,9 +232,10 @@ class Discussion:
         for i in range(self.rounds):
             persona = self.personas[i % len(self.personas)]
             speech = self._speak_stream(persona)
-            yield speech                        # renderer 流式渲染
-            # 等渲染完毕后，speech.full_text() 已填充
-            self.history.append({"name": persona.name, "text": speech.full_text()})
+            yield speech
+            self.history.append(
+                {"name": persona.name, "text": speech.full_text(), "role": "persona"}
+            )
             yield ""
 
         yield _make_footer()
