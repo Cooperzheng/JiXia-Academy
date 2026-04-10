@@ -2,11 +2,16 @@
 from __future__ import annotations
 import os
 from dataclasses import dataclass, field
-from typing import Generator
+from typing import Generator, TypedDict
 
 import anthropic
 
 from .persona import Persona
+
+
+class SpeechEntry(TypedDict):
+    name: str
+    text: str
 
 
 _HEADER_WIDTH = 39
@@ -30,7 +35,7 @@ def _make_footer() -> str:
     return f"{sep}\n  今日学宫，就此散场。你怎么看？\n{sep}"
 
 
-def _format_history(history: list[dict]) -> str:
+def _format_history(history: list[SpeechEntry]) -> str:
     """将对话历史格式化为对齐的文本块，供 user prompt 使用。"""
     if not history:
         return "（尚无发言，你是第一位开口的。）"
@@ -53,7 +58,7 @@ def _build_system_prompt(persona: Persona, topic: str, all_names: list[str]) -> 
     )
 
 
-def _build_user_prompt(current_persona: Persona, history: list[dict]) -> str:
+def _build_user_prompt(current_persona: Persona, history: list[SpeechEntry]) -> str:
     history_text = _format_history(history)
     return (
         f"{history_text}\n\n"
@@ -69,7 +74,8 @@ class Discussion:
     topic: str
     rounds: int = 5
     model: str = "claude-opus-4-5"
-    history: list[dict] = field(default_factory=list, init=False)
+    history: list[SpeechEntry] = field(default_factory=list, init=False)
+    _client: anthropic.Anthropic = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -99,6 +105,8 @@ class Discussion:
                 if attempt == 0:
                     continue  # 静默重试一次
                 return f"（{persona.name} 此刻无言——{e}）"
+        # unreachable, satisfies type checker
+        return f"（{persona.name} 此刻无言）"
 
     def run(self) -> Generator[str, None, None]:
         """
