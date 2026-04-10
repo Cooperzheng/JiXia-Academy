@@ -6,8 +6,12 @@
     python -m src.engine.main
 
 前置条件：
-    export GEMINI_API_KEY=your_key_here
+    在项目根目录建 .env 文件，写入：
+    GEMINI_API_KEY=your_key_here
 """
+from dotenv import load_dotenv
+load_dotenv()  # 加载项目根目录的 .env
+
 from .persona import load_persona
 from .discussion import Discussion
 from .renderer import render, make_color_map

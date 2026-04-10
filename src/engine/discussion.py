@@ -63,8 +63,9 @@ def _build_user_prompt(current_persona: Persona, history: list[SpeechEntry]) -> 
     return (
         f"{history_text}\n\n"
         f"现在轮到你（{current_persona.name}）发言。\n"
-        f"100字以内，直接表达立场，不必自报家门，不必客套。\n"
-        f"若前面有你认为错误的观点，直接指出并反驳。"
+        f"500字以内，直接表达立场，不必自报家门，不必客套。\n"
+        f"若前面有你认为错误的观点，直接指出并反驳。\n"
+        f"请务必使用简体中文回答。"
     )
 
 
@@ -73,7 +74,7 @@ class Discussion:
     personas: list[Persona]
     topic: str
     rounds: int = 5
-    model: str = "gemini-2.0-flash"
+    model: str = "models/gemini-2.5-flash"
     history: list[SpeechEntry] = field(default_factory=list, init=False)
     _client: OpenAI = field(init=False, repr=False)
 
@@ -99,7 +100,7 @@ class Discussion:
             try:
                 response = self._client.chat.completions.create(
                     model=self.model,
-                    max_tokens=300,
+                    max_tokens=1200,
                     messages=[
                         {"role": "system", "content": system},
                         {"role": "user", "content": user},
