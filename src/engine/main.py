@@ -27,9 +27,20 @@ def main() -> None:
         load_persona("sunzi"),        # → 孙子
     ]
 
+    # ── 议题输入 ──────────────────────────────────────────
+    sep = "━" * 39
+    print(f"\n{sep}")
+    print("  稷 下 学 宫")
+    print(f"{sep}")
+    sys.stdout.write("  今日议题：")
+    sys.stdout.flush()
+    topic = input().strip()
+    if not topic:
+        topic = "乱世中，应该讲道德还是讲实力？"
+
     discussion = Discussion(
         personas=personas,
-        topic="乱世中，应该讲道德还是讲实力？",
+        topic=topic,
         rounds=6,
     )
 

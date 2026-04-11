@@ -158,7 +158,7 @@ class Discussion:
     personas: list[Persona]
     topic: str
     rounds: int = 5
-    model: str = "gemini-2.0-flash-lite"
+    model: str = "gemini-2.5-flash-preview-04-17"
     opening_statement: str | None = None
     history: list[SpeechEntry] = field(default_factory=list, init=False)
     _client: OpenAI = field(init=False, repr=False)
