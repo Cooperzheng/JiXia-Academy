@@ -12,8 +12,13 @@
 4. 执行方式二选一：`superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`
 
 **写代码后（每次）：**
-4. 调用 `superpowers:requesting-code-review` — 请求 code review
-5. 调用 `superpowers:verification-before-completion` — 验收后再 push
+4. **自测先行**：每个 Task 完成后必须自己跑验证，不能等用户来发现
+   - 有输出的功能：本地端到端跑一次，肉眼确认输出正确
+   - 有解析/计算逻辑：用 `python -c "assert ..."` 快速验边界
+   - 新文件：至少确认能正常 import
+   - **严禁只做 import 检查就算验收**
+5. 调用 `superpowers:requesting-code-review` — 请求 code review
+6. 调用 `superpowers:verification-before-completion` — 验收后再 push
 
 **文档/人格文件（非代码）：** 上述流程可跳过，但重大格式变更前仍需 brainstorm。
 
