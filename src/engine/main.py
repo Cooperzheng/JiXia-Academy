@@ -45,8 +45,7 @@ def main() -> None:
     if opening:
         discussion.opening_statement = opening
 
-    print(f"\n  [提示] 争鸣进行中，按 Tab 键可随时插话")
-    print(f"{sep}\n")
+    print(f"\n  [提示] 争鸣进行中，按 Tab 键可随时插话\n")
 
     # ── 初始化 Moderator 和 Interruptor ──────────────────
     moderator = Moderator(
