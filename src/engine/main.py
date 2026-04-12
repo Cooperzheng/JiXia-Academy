@@ -102,6 +102,16 @@ def main() -> None:
     finally:
         interruptor.stop()
 
+    # ── 史官层 ────────────────────────────────────────────
+    sep = "━" * 39
+    sys.stdout.write(f"\n{sep}\n  学宫史官\n{sep}\n")
+    sys.stdout.flush()
+    for chunk in discussion.generate_historian_report():
+        sys.stdout.write(chunk)
+        sys.stdout.flush()
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+
 
 if __name__ == "__main__":
     main()

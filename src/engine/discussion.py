@@ -214,6 +214,39 @@ class Discussion:
 
         return SpeechStream(name=persona.name, _iter=_chunks())
 
+    def generate_historian_report(self) -> Iterator[str]:
+        """
+        以学宫史官视角分析整场争鸣，流式输出。
+        不评判谁赢谁输，只记录分歧断层和未解问题。
+        """
+        history_text = _format_history(self.history)
+        names = " · ".join(p.name for p in self.personas)
+
+        prompt = (
+            f"以下是一场圆桌争鸣的完整记录：\n\n"
+            f"议题：「{self.topic}」\n"
+            f"参与者：{names}\n\n"
+            f"{history_text}\n\n"
+            f"请作为旁观者，用简洁的现代分析语言（不超过200字）回答两个问题：\n"
+            f"1. 这场争鸣暴露了哪些真正的分歧断层？（参与者在哪些根本假设上不一致）\n"
+            f"2. 留下了哪些悬而未决的问题？（争鸣结束后仍然开放的核心问题）\n\n"
+            f"不要评判谁对谁错，不要替读者下结论。请用简体中文回答。"
+        )
+
+        try:
+            stream = self._client.chat.completions.create(
+                model=self.model,
+                max_tokens=600,
+                stream=True,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield delta
+        except Exception as e:
+            yield f"（史官此刻无言——{e}）"
+
     def respond_to_user(
         self,
         user_text: str,
