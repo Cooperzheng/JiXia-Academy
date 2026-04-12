@@ -114,6 +114,7 @@ JiXia-Academy/
 | CAMEL | [camel-ai/camel](https://github.com/camel-ai/camel) | Role inception prompt：防止人格漂移的"Never forget you are X"咒语 |
 | generative_agents | [joonspk-research/generative_agents](https://github.com/joonspk-research/generative_agents) | 记忆-议题对齐：发言前检索"我对此议题的核心观点"，议题关联记忆注入 |
 | ChatEval | [chanchimin/ChatEval](https://github.com/chanchimin/ChatEval) | 发言顺序研究：异步轮流+全历史注入质量最高；角色分工提升讨论深度 |
+| moollm persona | [simhacker/moollm](https://github.com/simhacker/moollm) | 动态人格状态机：五层堆栈（核心→角色→情景→临时→上下文），临时层自动过期可建模"被激怒后的立场偏移" |
 
 ### 人格蒸馏
 
