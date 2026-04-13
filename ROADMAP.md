@@ -46,6 +46,7 @@
 - ✅ 端到端跑通验收
 - ⬜ 录制 demo GIF
 - ⬜ 更新 README demo 为真实输出
+- ⬜ 发布传播：V2EX / Twitter / 提交 awesome-llm-agents 列表（需先有 50+ star）
 
 ---
 
