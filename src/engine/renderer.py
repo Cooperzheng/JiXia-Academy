@@ -2,16 +2,16 @@
 from __future__ import annotations
 
 import sys
-from typing import Callable, Generator, Union
+from typing import Callable, Generator
 
 from rich.console import Console
 from rich.text import Text
 
 from .persona import Persona
-from .discussion import SpeechStream
+from .discussion import SearchEvent
 from .interruptor import Interruptor
 
-__all__ = ["make_color_map", "render", "render_speech_stream", "render_user_speech"]
+__all__ = ["make_color_map", "render", "render_user_speech", "render_search_event"]
 
 _PALETTE = ["cyan", "yellow", "magenta", "green", "red"]
 _SEPARATOR_CHAR = "━"
@@ -19,7 +19,6 @@ _STAGE_PREFIX = "*"
 
 _console = Console()
 
-# 预先构建颜色的 ANSI 转义码，chunk 输出时直接写 stdout，绕过 rich markup 解析
 _ANSI_RESET = "\033[0m"
 _ANSI_COLOR: dict[str, str] = {
     "cyan":    "\033[36m",
@@ -32,7 +31,6 @@ _ANSI_COLOR: dict[str, str] = {
 
 
 def make_color_map(personas: list[Persona]) -> dict[str, str]:
-    """按调色板顺序为每个人格分配颜色，返回 {name: color} 映射。"""
     return {
         p.name: _PALETTE[i % len(_PALETTE)]
         for i, p in enumerate(personas)
@@ -40,17 +38,14 @@ def make_color_map(personas: list[Persona]) -> dict[str, str]:
 
 
 def _render_separator(line: str) -> None:
-    """渲染开场框/散场框行（含 ━ 字符的行）。"""
     _console.print(f"[bold white]{line}[/bold white]")
 
 
 def _render_stage(line: str) -> None:
-    """渲染舞台提示行（以 * 开头和结尾的斜体灰色文本）。"""
     _console.print(f"[dim italic]{line}[/dim italic]")
 
 
 def render_user_speech(text: str) -> None:
-    """渲染用户发言：白色加粗姓名，白色正文。"""
     t = Text()
     t.append("你", style="bold white")
     t.append("  │  ", style="white dim")
@@ -58,57 +53,90 @@ def render_user_speech(text: str) -> None:
     _console.print(t)
 
 
-def render_speech_stream(
-    speech: SpeechStream,
-    color_map: dict[str, str],
-    interruptor: Interruptor | None = None,
-) -> bool:
-    """
-    流式渲染一次发言。
-    返回 True 表示正常结束，False 表示被 Tab 中断。
-    """
-    name = speech.name
-    color = color_map.get(name, "white")
-
-    prefix = Text()
-    prefix.append(f"{name}", style=f"bold {color}")
-    prefix.append("  │  ", style="white dim")
-    _console.print(prefix, end="")
-
-    ansi = _ANSI_COLOR.get(color, "")
-    out = sys.stdout
-    interrupted = False
-
-    for chunk in speech:
-        out.write(f"{ansi}{chunk}{_ANSI_RESET}")
-        out.flush()
-        if interruptor and interruptor.interrupt_flag.is_set():
-            interrupted = True
-            break
-
-    out.write("\n")
-    out.flush()
-    return not interrupted
+def render_search_event(event: SearchEvent) -> None:
+    """渲染搜索状态提示（dim 样式）。"""
+    if not event.done:
+        _console.print(f"  [dim]🔍 {event.name} 正在查证：{event.query}...[/dim]")
+    elif event.count > 0:
+        _console.print(f"  [dim]✓  {event.name} 查证完毕（{event.count} 篇来源）[/dim]")
 
 
 def render(
-    lines: Generator[Union[str, SpeechStream], None, None],
+    lines: Generator,
     color_map: dict[str, str],
     interruptor: Interruptor | None = None,
     on_interrupt: Callable[[], None] | None = None,
 ) -> None:
     """
     消费 discussion.run() 的输出，用 rich 渲染每一项。
-    检测到 Tab 中断时调用 on_interrupt 回调，处理完后继续。
+
+    协议：
+      "__PERSONA_START__:{name}" → 打印姓名前缀，进入发言模式
+      "__PERSONA_END__"          → 发言结束，换行
+      SearchEvent                → 显示搜索状态
+      普通 str chunk             → 发言模式下直接写 stdout（带颜色）
+      空字符串                   → 空行
+      含 ━ 的字符串              → 分隔线
     """
+    out = sys.stdout
+    current_name: str | None = None
+    current_color: str = "white"
+    current_ansi: str = ""
+    in_speech = False
+    interrupted = False
+
     for item in lines:
-        if isinstance(item, SpeechStream):
-            completed = render_speech_stream(item, color_map, interruptor)
-            if not completed and on_interrupt:
+        # 搜索事件
+        if isinstance(item, SearchEvent):
+            if in_speech:
+                out.write("\n")
+                out.flush()
+                in_speech = False
+            render_search_event(item)
+            continue
+
+        if not isinstance(item, str):
+            continue
+
+        # 发言开始标记
+        if item.startswith("__PERSONA_START__:"):
+            current_name = item[len("__PERSONA_START__:"):]
+            current_color = color_map.get(current_name, "white")
+            current_ansi = _ANSI_COLOR.get(current_color, "")
+            # 打印「姓名 │ 」前缀
+            prefix = Text()
+            prefix.append(current_name, style=f"bold {current_color}")
+            prefix.append("  │  ", style="white dim")
+            _console.print(prefix, end="")
+            in_speech = True
+            interrupted = False
+            continue
+
+        # 发言结束标记
+        if item == "__PERSONA_END__":
+            if in_speech:
+                out.write("\n")
+                out.flush()
+                in_speech = False
+            if interrupted and on_interrupt:
                 on_interrupt()
                 if interruptor:
                     interruptor.clear()
-        elif not item:
+                interrupted = False
+            continue
+
+        # 发言模式下的文本 chunk
+        if in_speech:
+            out.write(f"{current_ansi}{item}{_ANSI_RESET}")
+            out.flush()
+            if interruptor and interruptor.interrupt_flag.is_set():
+                interrupted = True
+                # 继续消费 generator 直到 __PERSONA_END__，但不输出
+                # 通过设置 interrupted 标记，让 __PERSONA_END__ 处理
+            continue
+
+        # 非发言模式的普通内容
+        if not item:
             _console.print()
         elif _SEPARATOR_CHAR in item:
             _render_separator(item)

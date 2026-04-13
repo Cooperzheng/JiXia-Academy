@@ -2,3 +2,6 @@ openai
 rich
 python-dotenv
 pytest
+tavily-python
+duckduckgo-search
+ddgs

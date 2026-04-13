@@ -7,6 +7,8 @@ from typing import Generator, Iterator, Literal, TypedDict
 from openai import OpenAI
 
 from .persona import Persona
+from .material import MaterialStore
+from .search import SearchEngine, SearchResult, make_search_engine
 
 
 class SpeechEntry(TypedDict):
@@ -31,7 +33,37 @@ class SpeechStream:
         return "".join(self._buf)
 
 
+@dataclass
+class SearchEvent:
+    """搜索事件，用于 renderer 显示搜索状态。"""
+    name: str
+    query: str
+    done: bool = False
+    count: int = 0
+
+
 _HEADER_WIDTH = 39
+
+_SEARCH_TOOL_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "search_web",
+        "description": (
+            "搜索互联网获取实时信息。仅在以下情况使用：\n"
+            "- 议题涉及近期事件或最新数据\n"
+            "- 需要具体数字或事实支撑论点\n"
+            "- 对方引用了你不确定的信息\n"
+            "不要为了显得博学而搜索。搜索是论据武器，不是装饰。"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "搜索关键词，简洁精准"}
+            },
+            "required": ["query"]
+        }
+    }
+}
 
 
 def _make_header(topic: str, personas: list[Persona]) -> str:
@@ -53,7 +85,6 @@ def _make_footer() -> str:
 
 
 def _format_history(history: list[SpeechEntry]) -> str:
-    """将对话历史格式化为对齐的文本块，供 user prompt 使用。"""
     if not history:
         return "（尚无发言，你是第一位开口的。）"
     lines = []
@@ -64,11 +95,25 @@ def _format_history(history: list[SpeechEntry]) -> str:
     return "\n".join(lines)
 
 
+def _format_search_results(results: list[SearchResult]) -> str:
+    """将搜索结果格式化为注入 user message 的文本块。"""
+    if not results:
+        return ""
+    lines = ["---", "（以下为搜索到的背景资料，请用你自己的思维框架和语言消化，不要直接引用来源或 URL）"]
+    for i, r in enumerate(results, 1):
+        lines.append(f"{i}. 【{r.title}】")
+        if r.snippet:
+            lines.append(f"   {r.snippet}")
+    lines.append("---")
+    return "\n".join(lines)
+
+
 def _build_system_prompt(
     persona: Persona,
     topic: str,
     all_names: list[str],
     opening_statement: str | None = None,
+    material_store: MaterialStore | None = None,
 ) -> str:
     members = " · ".join(all_names)
     base = (
@@ -82,20 +127,24 @@ def _build_system_prompt(
         f"3. 用你自己的思维框架说话，不要变成通用的说教"
     )
 
-    # 角色内化咒语（参考 CAMEL role inception prompt）
+    # 角色内化咒语
     base += (
         f"\n\n【身份锚定】\n"
         f"你是且只是{persona.name}。绝不漂移成通用 AI 的语气。\n"
         f"你的思维框架、你的偏见、你的盲点，都是你独有的——不要试图「平衡」或「客观」。"
     )
 
-    # 激怒触发点（参考 generative_agents 记忆注入）
+    # 激怒触发点
     if persona.trigger_points:
         triggers = "\n".join(f"- {t}" for t in persona.trigger_points)
         base += (
             f"\n\n【你的雷区——被触犯时反驳力度自然加大】\n"
             f"{triggers}"
         )
+
+    # 背景资料（主持人注入）
+    if material_store and not material_store.is_empty():
+        base += material_store.get_prompt_block()
 
     # 主持人开场（始终在最末尾）
     if opening_statement:
@@ -142,7 +191,6 @@ def _build_user_response_prompt(
     user_text: str,
     history: list[SpeechEntry],
 ) -> str:
-    """用户插话后，被点名/选中人格的专属 prompt。"""
     history_text = _format_history(history)
     return (
         f"【对话记录】\n{history_text}\n\n"
@@ -160,8 +208,10 @@ class Discussion:
     rounds: int = 5
     model: str = "models/gemini-2.5-flash"
     opening_statement: str | None = None
+    material_store: MaterialStore = field(default_factory=MaterialStore)
     history: list[SpeechEntry] = field(default_factory=list, init=False)
     _client: OpenAI = field(init=False, repr=False)
+    _search_engine: SearchEngine | None = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -174,28 +224,87 @@ class Discussion:
             api_key=api_key,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         )
+        self._search_engine = make_search_engine()
 
     def inject_user_speech(self, text: str) -> None:
-        """将用户发言追加进 history。"""
         self.history.append({"name": "你", "text": text, "role": "user"})
 
     def _speak_stream(
         self,
         persona: Persona,
         user_text: str | None = None,
-    ) -> SpeechStream:
-        """调用流式 API，返回 SpeechStream。user_text 非空时使用用户回应 prompt。"""
+    ) -> Generator[str | SearchEvent, None, None]:
+        """
+        调用 API，yield SearchEvent（搜索状态）和 str chunks（发言内容）。
+        支持 Function Calling：若模型决定搜索，先 yield SearchEvent 再 yield 发言。
+        """
         all_names = [p.name for p in self.personas]
         system = _build_system_prompt(
-            persona, self.topic, all_names, self.opening_statement
+            persona, self.topic, all_names, self.opening_statement, self.material_store
         )
         if user_text is not None:
             user = _build_user_response_prompt(persona, user_text, self.history)
         else:
             user = _build_user_prompt(persona, self.history)
 
-        def _chunks() -> Iterator[str]:
-            try:
+        tools = [_SEARCH_TOOL_SCHEMA] if self._search_engine else None
+
+        try:
+            # 第一次调用：可能触发 Function Calling
+            response = self._client.chat.completions.create(
+                model=self.model,
+                max_tokens=2000,
+                stream=False,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                **({"tools": tools} if tools else {}),
+            )
+
+            choice = response.choices[0]
+
+            # 处理 Function Calling
+            if (
+                tools
+                and choice.finish_reason == "tool_calls"
+                and choice.message.tool_calls
+            ):
+                tool_call = choice.message.tool_calls[0]
+                import json
+                args = json.loads(tool_call.function.arguments)
+                query = args.get("query", "")
+
+                yield SearchEvent(name=persona.name, query=query, done=False)
+
+                results = []
+                if self._search_engine:
+                    try:
+                        results = self._search_engine.search(query, max_results=3)
+                    except Exception:
+                        pass
+
+                yield SearchEvent(name=persona.name, query=query, done=True, count=len(results))
+
+                # 将搜索结果追加到 user message，第二次调用生成发言
+                search_block = _format_search_results(results)
+                user_with_search = f"{user}\n\n{search_block}" if search_block else user
+
+                stream2 = self._client.chat.completions.create(
+                    model=self.model,
+                    max_tokens=2000,
+                    stream=True,
+                    messages=[
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user_with_search},
+                    ],
+                )
+                for chunk in stream2:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        yield delta
+            else:
+                # 无 Function Calling，直接流式重新调用（保持流式体验）
                 stream = self._client.chat.completions.create(
                     model=self.model,
                     max_tokens=2000,
@@ -209,16 +318,12 @@ class Discussion:
                     delta = chunk.choices[0].delta.content
                     if delta:
                         yield delta
-            except Exception as e:
-                yield f"（{persona.name} 此刻无言——{e}）"
 
-        return SpeechStream(name=persona.name, _iter=_chunks())
+        except Exception as e:
+            yield f"（{persona.name} 此刻无言——{e}）"
 
     def generate_historian_report(self) -> Iterator[str]:
-        """
-        以学宫史官视角分析整场争鸣，流式输出。
-        不评判谁赢谁输，只记录分歧断层和未解问题。
-        """
+        """以学宫史官视角分析整场争鸣，流式输出。"""
         history_text = _format_history(self.history)
         names = " · ".join(p.name for p in self.personas)
 
@@ -251,41 +356,45 @@ class Discussion:
         self,
         user_text: str,
         moderator: "Moderator",  # type: ignore[name-defined]  # noqa: F821
-    ) -> Generator[SpeechStream, None, None]:
-        """
-        决定回应人选，逐个 yield SpeechStream。
-        解析 user_text 中的点名，传给 moderator。
-        """
+    ) -> Generator[tuple[str, Generator[str | SearchEvent, None, None]], None, None]:
+        """决定回应人选，逐个 yield (persona_name, speech_generator)。"""
         named = [p.name for p in self.personas if p.name in user_text]
-
-        speakers = moderator.next_speakers_for_user(
-            self.history, user_text, named
-        )
+        speakers = moderator.next_speakers_for_user(self.history, user_text, named)
 
         for persona in speakers:
-            speech = self._speak_stream(persona, user_text=user_text)
-            yield speech
-            self.history.append(
-                {"name": persona.name, "text": speech.full_text(), "role": "persona"}
-            )
+            gen = self._speak_stream(persona, user_text=user_text)
+            yield persona.name, gen
 
-    def run(self) -> Generator[str | SpeechStream, None, None]:
+    def run(self) -> Generator[str | SearchEvent, None, None]:
         """
         主争鸣循环。固定轮转。
 
         yield 类型：
-          - str          → 开场框/散场框/空行，直接打印
-          - SpeechStream → 流式发言，renderer 负责逐 chunk 输出
+          - str         → 开场框/散场框/空行/文本 chunk，renderer 直接输出
+          - SearchEvent → 搜索状态，renderer 显示提示
+
+        发言格式通过特殊 str 标记传递人名：
+          "__PERSONA_START__:{name}"  → 新发言开始，renderer 打印姓名前缀
+          "__PERSONA_END__"           → 发言结束，renderer 换行
         """
         yield _make_header(self.topic, self.personas)
         yield ""
 
         for i in range(self.rounds):
             persona = self.personas[i % len(self.personas)]
-            speech = self._speak_stream(persona)
-            yield speech
+            buf: list[str] = []
+
+            yield f"__PERSONA_START__:{persona.name}"
+            for item in self._speak_stream(persona):
+                if isinstance(item, SearchEvent):
+                    yield item
+                else:
+                    buf.append(item)
+                    yield item
+            yield "__PERSONA_END__"
+
             self.history.append(
-                {"name": persona.name, "text": speech.full_text(), "role": "persona"}
+                {"name": persona.name, "text": "".join(buf), "role": "persona"}
             )
             yield ""
 
